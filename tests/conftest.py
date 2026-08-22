@@ -147,7 +147,7 @@ def isolated_variant(conn):
         ), sel AS (
             INSERT INTO qq.sellers (seller_uid, display_name, region_id, rating,
                                     onboarded_at, source_hash)
-            SELECT %(code)s, 'Test Seller', reg.region_id, 4.5, now(), sha256(%(code)s::bytea)
+            SELECT %(code)s, 'Test Seller', reg.region_id, 4.5, now(), sha256(convert_to(%(code)s, 'UTF8'))
             FROM reg RETURNING seller_id
         ), cat AS (
             INSERT INTO qq.categories (category_slug, category_name, depth)
@@ -158,11 +158,11 @@ def isolated_variant(conn):
             INSERT INTO qq.products (product_uid, title, seller_id, category_id,
                                      base_price, launched_at, source_hash)
             SELECT %(code)s, 'Test Product', sel.seller_id, cat.category_id, 10.00,
-                   now(), sha256(%(code)s::bytea)
+                   now(), sha256(convert_to(%(code)s, 'UTF8'))
             FROM sel, cat RETURNING product_id
         ), var AS (
             INSERT INTO qq.product_variants (sku, product_id, variant_label, source_hash)
-            SELECT %(code)s, prod.product_id, 'default', sha256(%(code)s::bytea)
+            SELECT %(code)s, prod.product_id, 'default', sha256(convert_to(%(code)s, 'UTF8'))
             FROM prod RETURNING variant_id
         )
         INSERT INTO qq.inventory (variant_id, qty_on_hand, qty_reserved, reorder_point)

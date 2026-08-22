@@ -32,6 +32,7 @@ import random
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Iterator, Sequence, TypeVar
 
@@ -265,7 +266,7 @@ INSERT INTO {schema}.orders
      subtotal, shipping_fee, tax_amount, total_amount, item_count, source_hash)
 SELECT %(order_uid)s, %(placed_at)s, c.customer_id, c.region_id, 'pending',
        r.currency_code, %(subtotal)s, %(shipping)s, %(tax)s, %(total)s,
-       %(item_count)s, sha256(%(order_uid)s::bytea)
+       %(item_count)s, sha256(convert_to(%(order_uid)s, 'UTF8'))
 FROM {schema}.customers c
 JOIN {schema}.regions   r ON r.region_id = c.region_id
 WHERE c.customer_id = %(customer_id)s
@@ -314,6 +315,11 @@ def checkout(
     """
     if not items:
         return CheckoutResult(ok=False, reason="empty cart")
+
+    # orders.placed_at is NOT NULL and is the partition key, so it has to
+    # be a real value before the insert -- not left to a column default
+    # the partitioned parent does not have.
+    placed_at = placed_at or datetime.now(timezone.utc)
 
     merged: dict[int, tuple[int, float]] = {}
     for vid, qty, price in items:
