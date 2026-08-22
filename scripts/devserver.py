@@ -45,12 +45,95 @@ def _require(mod: str):
         )
 
 
+# Server settings, deliberately identical to the ones docker-compose.yml
+# passes on the postgres command line. Without this the two supported
+# ways to run QueryQuest disagree, and a benchmark taken through the
+# embedded server is not comparable to one taken through Docker.
+#
+# The defaults these replace are sized for a very small machine:
+#   shared_buffers 128MB   -> the buffer pool thrashes on a 10M-row load,
+#                             visible as buffers_backend far exceeding
+#                             buffers_checkpoint in pg_stat_bgwriter
+#   work_mem 4MB           -> the ETL's semi-join spills to a temp file on
+#                             every chunk (wait event IO / BufFileWrite)
+#   max_wal_size 1GB       -> forces requested checkpoints mid-load, and
+#                             with them a wave of full-page writes
+#   random_page_cost 4     -> assumes a spinning disk, which skews the
+#                             planner away from index scans
+#
+# Durability is untouched: synchronous_commit and wal_level keep their
+# defaults, because this project makes claims about ACID behaviour and
+# buying load throughput with crash safety would undercut them.
+TUNING = {
+    "shared_buffers": "512MB",
+    "work_mem": "32MB",
+    "maintenance_work_mem": "256MB",
+    "effective_cache_size": "2GB",
+    "random_page_cost": "1.1",
+    "max_wal_size": "4GB",
+    "checkpoint_completion_target": "0.9",
+    "max_connections": "100",
+    "enable_partitionwise_join": "on",
+    "enable_partitionwise_aggregate": "on",
+    "track_io_timing": "on",
+}
+
+
+# Settings that only the postmaster can change. A reload silently leaves
+# these at their old values, which is how you end up believing you tuned
+# a server that is still running stock defaults.
+RESTART_REQUIRED = ("shared_buffers", "max_connections")
+
+
+def _apply_tuning(server) -> bool:
+    """ALTER SYSTEM the settings above. Returns True if a restart is due."""
+    for key, value in TUNING.items():
+        server.psql(f"ALTER SYSTEM SET {key} = '{value}'")
+    server.psql("SELECT pg_reload_conf()")
+
+    for key in RESTART_REQUIRED:
+        live = server.psql(f"SHOW {key}")
+        if TUNING[key].lower() not in live.lower():
+            return True
+    return False
+
+
+def _stop_postmaster() -> None:
+    """Fast shutdown via the pid file.
+
+    pgserver's own cleanup() is a no-op under cleanup_mode=None -- which
+    is the mode we want for everything else -- so the postmaster is
+    signalled directly. SIGINT is a fast shutdown: existing transactions
+    abort, but the data directory is left consistent.
+    """
+    pidfile = PGDATA / "postmaster.pid"
+    if not pidfile.exists():
+        return
+    try:
+        pid = int(pidfile.read_text(encoding="utf-8").splitlines()[0])
+    except (ValueError, IndexError, OSError):
+        return
+
+    os.kill(pid, signal.SIGINT)
+    for _ in range(60):
+        if not pidfile.exists():
+            return
+        time.sleep(1)
+
+
 def start_postgres() -> str:
     pgserver = _require("pgserver")
     PGDATA.mkdir(parents=True, exist_ok=True)
     # cleanup_mode=None leaves the server up after this process exits, so
     # a crashed CLI does not take the database with it.
     server = pgserver.get_server(PGDATA, cleanup_mode=None)
+
+    if _apply_tuning(server):
+        print("applying server tuning (one restart required)...")
+        _stop_postmaster()
+        server = pgserver.get_server(PGDATA, cleanup_mode=None)
+        for key in RESTART_REQUIRED:
+            print(f"  {key} -> {TUNING[key]}")
 
     # pgserver hands back a URI for its default database; QueryQuest gets
     # its own, so a `DROP SCHEMA` never risks collateral damage.
@@ -87,6 +170,10 @@ def start_redis():
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
+    # stdout is usually a pipe here, and a buffered banner nobody can read
+    # until shutdown defeats the point of printing connection details.
+    sys.stdout.reconfigure(line_buffering=True)
+
     dsn = start_postgres()
     client, redis_url = start_redis()
 
