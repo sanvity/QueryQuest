@@ -34,7 +34,7 @@ import psycopg
 from psycopg import sql as S
 
 from ..config import META_SCHEMA, OPTIMIZED_SCHEMA
-from .specs import Lookup, TableSpec
+from .specs import TableSpec
 
 log = logging.getLogger("queryquest.etl.loader")
 

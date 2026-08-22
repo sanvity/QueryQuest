@@ -12,9 +12,6 @@ whole chunk is rolled back and the batch is marked quarantined.
 
 from __future__ import annotations
 
-import pytest
-
-from queryquest.config import settings
 from queryquest.db import fetch_all, fetch_value
 from queryquest.etl import pipeline, specs
 

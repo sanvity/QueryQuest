@@ -33,7 +33,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Iterable, Iterator, Sequence, TypeVar
+from typing import Callable, Iterator, Sequence, TypeVar
 
 import psycopg
 from psycopg import errors as pg_errors

@@ -13,8 +13,6 @@ reason, rather than the p95 quietly drifting upward for a month.
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from queryquest.bench.queries import BY_NAME, sample_pools

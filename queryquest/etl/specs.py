@@ -14,7 +14,7 @@ Three things every spec has to answer:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 # ---------------------------------------------------------------------
