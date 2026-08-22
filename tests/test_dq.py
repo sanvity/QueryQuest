@@ -172,8 +172,14 @@ def test_batch_over_the_reject_ceiling_is_quarantined_wholesale(
     assert result.state == "quarantined"
     assert "exceeds ceiling" in (result.error or "")
     # The good half must NOT have been committed.
+    # Single % here, not %%: psycopg only un-escapes doubled percent signs
+    # when parameters are passed, and this query has none -- so '%%' would
+    # stay literal and the LIKE would match nothing, passing the assertion
+    # for entirely the wrong reason.
     assert fetch_value(
-        conn, f"SELECT count(*) FROM {SCHEMA}.customers WHERE customer_uid LIKE 'DQ-BULK-%%'"
+        conn,
+        f"SELECT count(*) FROM {SCHEMA}.customers WHERE customer_uid LIKE %s",
+        ("DQ-BULK-%",),
     ) == 0
 
 
