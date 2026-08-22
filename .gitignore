@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated feeds and local server state. Reproducible from
+# scripts/generate_data.py, so there is no reason to version them --
+# and at full scale they are several GB.
+data/
+reports/
+.devdata/
+.devserver.json
+
+.env
+.env.local
+
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -1,0 +1,78 @@
+name: CI
+
+# The suite runs against a real PostgreSQL and a real Redis, because the
+# behaviour under test -- FOR UPDATE, ON CONFLICT, partition pruning,
+# SKIP LOCKED, Redis expiry -- is exactly what a mock cannot reproduce.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: queryquest
+          POSTGRES_PASSWORD: queryquest
+          POSTGRES_DB: queryquest
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U queryquest -d queryquest"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      QQ_DSN: postgresql://queryquest:queryquest@localhost:5432/queryquest
+      QQ_REDIS_URL: redis://localhost:6379/0
+      QQ_DATA_DIR: ./data
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Create schemas and partitions
+        run: python -m queryquest.cli init
+
+      - name: Generate a small dataset
+        run: python scripts/generate_data.py --scale tiny
+
+      - name: Load
+        run: python -m queryquest.cli load
+
+      - name: Refresh materialized views
+        run: python -m queryquest.cli refresh
+
+      - name: Test
+        run: python -m pytest -v --timeout=600
+
+      - name: Benchmark (smoke)
+        run: python -m queryquest.cli bench --reps 5
+
+      - name: Upload the generated report
+        if: always()
+        run: python -m queryquest.cli report && cat docs/BENCHMARKS.md

@@ -1,0 +1,72 @@
+# PostgreSQL and Redis for local runs.
+#
+#   docker compose up -d
+#   export QQ_DSN=postgresql://queryquest:queryquest@localhost:5432/queryquest
+#
+# No Docker? `python scripts/devserver.py serve` runs both in user space
+# from pip wheels instead.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: queryquest-postgres
+    environment:
+      POSTGRES_USER: queryquest
+      POSTGRES_PASSWORD: queryquest
+      POSTGRES_DB: queryquest
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    command:
+      # PostgreSQL ships defaults sized for a very small machine. These
+      # are modest development settings, set explicitly so the benchmark
+      # measures the schema rather than an artificially crippled server.
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - max_connections=100
+      - -c
+      - enable_partitionwise_join=on
+      - -c
+      - enable_partitionwise_aggregate=on
+      - -c
+      - track_io_timing=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queryquest -d queryquest"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: queryquest-redis
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      - --maxmemory
+      - 256mb
+      # The cache is a cache: under memory pressure evict the least
+      # recently used key rather than start refusing writes.
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -1,0 +1,5 @@
+# Runtime dependencies.
+psycopg[binary]>=3.1,<4
+psycopg-pool>=3.2,<4
+redis>=5.0,<7
+python-dotenv>=1.0

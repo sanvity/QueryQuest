@@ -1,0 +1,12 @@
+-r requirements.txt
+
+pytest>=8.0
+pytest-timeout>=2.3
+tabulate>=0.9
+
+# No-Docker local stack. Both ship real server binaries inside a wheel,
+# so `python scripts/devserver.py serve` needs neither root nor a
+# container runtime. POSIX only -- on Windows use Docker, or run inside
+# WSL.
+pgserver>=0.1.4 ; sys_platform != "win32"
+redislite>=6.2 ; sys_platform != "win32"

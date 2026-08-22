@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "queryquest"
+version = "1.0.0"
+description = "A normalized PostgreSQL warehouse with an idempotent ETL pipeline and a measured performance story"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "psycopg[binary]>=3.1,<4",
+    "psycopg-pool>=3.2,<4",
+    "redis>=5.0,<7",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "tabulate>=0.9",
+    "pgserver>=0.1.4; sys_platform != 'win32'",
+    "redislite>=6.2; sys_platform != 'win32'",
+]
+
+[project.scripts]
+queryquest = "queryquest.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["queryquest*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+timeout = 600
+markers = [
+    "slow: takes more than a few seconds",
+    "concurrency: spawns worker threads",
+]
