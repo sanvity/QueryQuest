@@ -4,7 +4,6 @@ A normalized PostgreSQL marketplace warehouse, an idempotent ETL
 pipeline that loads it, and a performance story that is **measured
 rather than asserted**.
 
-[![CI](https://github.com/sanvity/QueryQuest/actions/workflows/ci.yml/badge.svg)](https://github.com/sanvity/QueryQuest/actions/workflows/ci.yml)
 
 ---
 
