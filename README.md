@@ -4,7 +4,7 @@ A normalized PostgreSQL marketplace warehouse, an idempotent ETL
 pipeline that loads it, and a performance story that is **measured
 rather than asserted**.
 
-[![CI](https://github.com/Aaaaarin/QueryQuest/actions/workflows/ci.yml/badge.svg)](https://github.com/Aaaaarin/QueryQuest/actions/workflows/ci.yml)
+[![CI](https://github.com/sanvity/QueryQuest/actions/workflows/ci.yml/badge.svg)](https://github.com/sanvity/QueryQuest/actions/workflows/ci.yml)
 
 ---
 
@@ -33,7 +33,7 @@ is typed by hand, so it cannot drift from what was actually observed.
 ## Quickstart
 
 ```bash
-git clone https://github.com/Aaaaarin/QueryQuest.git
+git clone https://github.com/sanvity/QueryQuest.git
 cd QueryQuest
 pip install -r requirements-dev.txt
 
